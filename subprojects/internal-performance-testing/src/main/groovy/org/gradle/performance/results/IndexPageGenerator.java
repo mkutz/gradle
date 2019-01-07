@@ -80,14 +80,27 @@ public class IndexPageGenerator extends HtmlPageGenerator<ResultsStore> {
         List<? extends PerformanceTestExecution> recentExecutions = history.getExecutions();
         List<? extends PerformanceTestExecution> currentBuildExecutions = recentExecutions.stream().filter(execution -> Objects.equals(execution.getTeamCityBuildId(), scenario.getTeamCityBuildId())).collect(toList());
         if (currentBuildExecutions.isEmpty()) {
-            scenario.setRecentExecutions(recentExecutions.stream().map(this::extractExecutionData).filter(Objects::nonNull).collect(toList()));
+            scenario.setRecentExecutions(determineRecentExecutions(removeEmptyExecution(recentExecutions)));
         } else {
-            scenario.setCurrentBuildExecutions(currentBuildExecutions.stream().map(this::extractExecutionData).filter(Objects::nonNull).collect(toList()));
+            scenario.setCurrentBuildExecutions(removeEmptyExecution(currentBuildExecutions));
         }
 
         scenario.setCrossBuild(history instanceof CrossBuildPerformanceTestHistory);
 
         return scenario;
+    }
+
+    private List<ScenarioBuildResultData.ExecutionData> removeEmptyExecution(List<? extends PerformanceTestExecution> executions) {
+        return executions.stream().map(this::extractExecutionData).filter(Objects::nonNull).collect(toList());
+    }
+
+    private List<ScenarioBuildResultData.ExecutionData> determineRecentExecutions(List<ScenarioBuildResultData.ExecutionData> executions) {
+        List<ScenarioBuildResultData.ExecutionData> executionsOfSameCommit = executions.stream().filter(execution -> execution.getCommitId().equals(commitId)).collect(toList());
+        if (executionsOfSameCommit.isEmpty()) {
+            return executions;
+        } else {
+            return executionsOfSameCommit;
+        }
     }
 
     private ScenarioBuildResultData.ExecutionData extractExecutionData(PerformanceTestExecution performanceTestExecution) {
